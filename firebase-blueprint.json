@@ -1,0 +1,143 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Housing society user profile storing flat number, role, and membership approval status",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated Firebase user ID" },
+        "name": { "type": "string", "description": "Full name of the resident or admin" },
+        "email": { "type": "string", "description": "Email address of the user" },
+        "flatNumber": { "type": "string", "description": "Flat or unit number (e.g. A-101, Plot 114)" },
+        "mobileNumber": { "type": "string", "description": "10-digit mobile number for WhatsApp receipts" },
+        "role": { "type": "string", "enum": ["resident", "admin"], "description": "Role in society" },
+        "approvalStatus": { "type": "string", "enum": ["pending", "approved", "rejected"], "description": "Resident society verification status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp created (FieldValue.serverTimestamp())" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp updated (FieldValue.serverTimestamp())" }
+      },
+      "required": ["userId", "name", "email", "flatNumber", "role", "approvalStatus", "createdAt"]
+    },
+    "SocietySettings": {
+      "title": "SocietySettings",
+      "description": "Global settings for housing society payments and details",
+      "type": "object",
+      "properties": {
+        "upiId": { "type": "string", "description": "Society UPI ID for maintenance collection" },
+        "qrCodeImageUrl": { "type": "string", "description": "URL to the UPI QR code image" },
+        "societyName": { "type": "string", "description": "Society full registered name" },
+        "monthlyMaintenanceAmount": { "type": "number", "description": "Standard monthly maintenance fee in INR" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Timestamp updated (FieldValue.serverTimestamp())" }
+      },
+      "required": ["upiId", "societyName"]
+    },
+    "MaintenanceRecord": {
+      "title": "MaintenanceRecord",
+      "description": "Maintenance payment records submitted by residents and approved by admin",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "ID of resident who made the payment" },
+        "userName": { "type": "string", "description": "Name of the resident" },
+        "flatNumber": { "type": "string", "description": "Flat number of resident" },
+        "userMobile": { "type": "string", "description": "Resident mobile number for WhatsApp receipts" },
+        "monthYear": { "type": "string", "description": "Billing cycle month and year e.g. October 2026" },
+        "amount": { "type": "number", "description": "Maintenance payment amount in INR" },
+        "utrNumber": { "type": "string", "description": "12-digit UTR/reference number from UPI transaction" },
+        "status": { "type": "string", "enum": ["pending", "approved"], "description": "Verification status" },
+        "adminRemarks": { "type": "string", "description": "Optional admin note or receipt reference" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Submission timestamp (FieldValue.serverTimestamp())" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp (FieldValue.serverTimestamp())" }
+      },
+      "required": ["userId", "userName", "flatNumber", "monthYear", "amount", "utrNumber", "status", "createdAt"]
+    },
+    "SocietyExpense": {
+      "title": "SocietyExpense",
+      "description": "Expenses logged by society admin for resident transparency",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title or reason of the expense" },
+        "category": { "type": "string", "description": "Category e.g. Security, Electricity, Garden, Water, Cleaning" },
+        "amount": { "type": "number", "description": "Expense amount in INR" },
+        "date": { "type": "string", "description": "Date of expense in YYYY-MM-DD or readable format" },
+        "loggedBy": { "type": "string", "description": "Admin UID who logged the expense" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp (FieldValue.serverTimestamp())" }
+      },
+      "required": ["title", "category", "amount", "date", "createdAt"]
+    },
+    "Complaint": {
+      "title": "Complaint",
+      "description": "Complaints or service requests raised by residents and responded to by committee",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "UID of resident submitting the complaint" },
+        "userName": { "type": "string", "description": "Name of resident" },
+        "flatNumber": { "type": "string", "description": "Flat number of resident" },
+        "title": { "type": "string", "description": "Summary title of the issue" },
+        "description": { "type": "string", "description": "Detailed description of the complaint" },
+        "status": { "type": "string", "enum": ["open", "resolved"], "description": "Complaint status" },
+        "adminResponse": { "type": "string", "description": "Response or action taken message from committee" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp (FieldValue.serverTimestamp())" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp (FieldValue.serverTimestamp())" }
+      },
+      "required": ["userId", "userName", "flatNumber", "title", "description", "status", "createdAt"]
+    },
+    "Notice": {
+      "title": "Notice",
+      "description": "Official society announcements and notices published by admin",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Notice headline" },
+        "description": { "type": "string", "description": "Full details of announcement" },
+        "date": { "type": "string", "description": "Date of notice" },
+        "priority": { "type": "string", "enum": ["normal", "urgent"], "description": "Priority level" },
+        "postedBy": { "type": "string", "description": "Admin UID who posted notice" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp (FieldValue.serverTimestamp())" }
+      },
+      "required": ["title", "description", "date", "priority", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Real-time push notification records sent to residents when payment is approved or complaint updated",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Target recipient user ID" },
+        "title": { "type": "string", "description": "Notification title headline" },
+        "body": { "type": "string", "description": "Detailed notification message" },
+        "type": { "type": "string", "enum": ["payment_approved", "payment_declined", "complaint_updated", "notice_published", "general"], "description": "Category of event" },
+        "referenceId": { "type": "string", "description": "Related payment record ID or complaint ID" },
+        "isRead": { "type": "boolean", "description": "Whether user has read notification" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp (FieldValue.serverTimestamp())" }
+      },
+      "required": ["userId", "title", "body", "type", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles, roles (resident/admin), and approval statuses"
+    },
+    "/society_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/SocietySettings" },
+      "description": "Society UPI ID, QR code image, and general settings"
+    },
+    "/maintenance_records/{recordId}": {
+      "schema": { "$ref": "#/entities/MaintenanceRecord" },
+      "description": "Monthly maintenance payment submission and approval records"
+    },
+    "/society_expenses/{expenseId}": {
+      "schema": { "$ref": "#/entities/SocietyExpense" },
+      "description": "Society expenses for resident transparency"
+    },
+    "/complaints/{complaintId}": {
+      "schema": { "$ref": "#/entities/Complaint" },
+      "description": "Resident complaints and committee responses"
+    },
+    "/notices/{noticeId}": {
+      "schema": { "$ref": "#/entities/Notice" },
+      "description": "Society official notices and announcements"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Real-time notifications sent to users"
+    }
+  }
+}

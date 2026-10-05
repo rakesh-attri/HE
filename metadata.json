@@ -1,0 +1,6 @@
+{
+  "name": "HN Vistar Samiti",
+  "description": "Housing society management app for Hanuman Nagar Vistar 1 Vikas Samiti with Google Auth, maintenance payment tracking, UPI QR verification, expense transparency, and complaints management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

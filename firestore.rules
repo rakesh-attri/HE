@@ -1,0 +1,227 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email != null && (
+          request.auth.token.email == 'therakeshattri@gmail.com' ||
+          request.auth.token.email.matches('(?i)^therakeshattri@gmail\\.com$')
+        )) ||
+        request.auth.uid == 'admin_rakesh'
+      );
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        isBootstrappedAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    // Validation schemas
+    function isValidUser(data) {
+      return data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.email is string && data.email.size() > 0 && data.email.size() <= 150 &&
+        data.flatNumber is string && data.flatNumber.size() > 0 && data.flatNumber.size() <= 50 &&
+        (!('mobileNumber' in data) || (data.mobileNumber is string && data.mobileNumber.size() <= 20)) &&
+        data.role in ['resident', 'admin'] &&
+        (!('approvalStatus' in data) || data.approvalStatus in ['pending', 'approved', 'rejected', 'blocked']) &&
+        (!('fcmToken' in data) || (data.fcmToken is string && data.fcmToken.size() <= 500)) &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidSocietySettings(data) {
+      return data.upiId is string && data.upiId.size() > 0 && data.upiId.size() <= 100 &&
+        data.societyName is string && data.societyName.size() > 0 && data.societyName.size() <= 150 &&
+        (!('qrCodeImageUrl' in data) || (data.qrCodeImageUrl is string && data.qrCodeImageUrl.size() <= 500000)) &&
+        (!('monthlyMaintenanceAmount' in data) || (data.monthlyMaintenanceAmount is number && data.monthlyMaintenanceAmount >= 0)) &&
+        (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidMaintenanceRecord(data) {
+      return data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+        data.userName is string && data.userName.size() > 0 && data.userName.size() <= 100 &&
+        data.flatNumber is string && data.flatNumber.size() > 0 && data.flatNumber.size() <= 50 &&
+        (!('userMobile' in data) || (data.userMobile is string && data.userMobile.size() <= 20)) &&
+        (!('receiptImageUrl' in data) || (data.receiptImageUrl is string && data.receiptImageUrl.size() <= 600000)) &&
+        data.monthYear is string && data.monthYear.size() > 0 && data.monthYear.size() <= 50 &&
+        data.amount is number && data.amount > 0 &&
+        data.utrNumber is string && data.utrNumber.size() >= 4 && data.utrNumber.size() <= 64 &&
+        data.status in ['pending', 'approved', 'declined', 'rejected'] &&
+        (!('adminRemarks' in data) || (data.adminRemarks is string && data.adminRemarks.size() <= 500)) &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidExpense(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+        data.category is string && data.category.size() > 0 && data.category.size() <= 50 &&
+        data.amount is number && data.amount > 0 &&
+        data.date is string && data.date.size() > 0 && data.date.size() <= 50 &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        (!('loggedBy' in data) || (data.loggedBy is string && data.loggedBy.size() <= 128));
+    }
+
+    function isValidComplaint(data) {
+      return data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+        data.userName is string && data.userName.size() > 0 && data.userName.size() <= 100 &&
+        data.flatNumber is string && data.flatNumber.size() > 0 && data.flatNumber.size() <= 50 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+        data.description is string && data.description.size() > 0 && data.description.size() <= 2000 &&
+        (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 600000)) &&
+        (!('messages' in data) || data.messages is list) &&
+        data.status in ['open', 'in_progress', 'resolved'] &&
+        (!('adminResponse' in data) || (data.adminResponse is string && data.adminResponse.size() <= 2000)) &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidNotice(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+        data.description is string && data.description.size() > 0 && data.description.size() <= 3000 &&
+        data.date is string && data.date.size() > 0 && data.date.size() <= 50 &&
+        data.priority in ['normal', 'urgent'] &&
+        data.createdAt is timestamp && data.createdAt <= request.time &&
+        (!('postedBy' in data) || (data.postedBy is string && data.postedBy.size() <= 128));
+    }
+
+    function isValidNotification(data) {
+      return data.userId is string && data.userId.size() > 0 && data.userId.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+        data.body is string && data.body.size() > 0 && data.body.size() <= 1000 &&
+        data.type in ['payment_approved', 'payment_declined', 'complaint_updated', 'notice_published', 'general'] &&
+        (!('referenceId' in data) || (data.referenceId is string && data.referenceId.size() <= 128)) &&
+        (!('isRead' in data) || data.isRead is bool) &&
+        data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // 1. Users collection
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+
+      allow create: if isSignedIn() &&
+        request.auth.uid == userId &&
+        incoming().userId == request.auth.uid &&
+        incoming().keys().hasAll(['userId', 'name', 'email', 'flatNumber', 'role', 'createdAt']) &&
+        isValidUser(incoming()) &&
+        (incoming().role == 'resident' || isBootstrappedAdmin());
+
+      allow update: if isSignedIn() &&
+        isValidUser(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt && (
+          (request.auth.uid == userId && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'flatNumber', 'mobileNumber', 'fcmToken', 'updatedAt'])) ||
+          isAdmin()
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    // 2. Society Settings
+    match /society_settings/{settingId} {
+      allow get, list: if isSignedIn();
+
+      allow create, update, delete: if isSignedIn() && isAdmin() &&
+        isValidSocietySettings(incoming());
+    }
+
+    // 3. Maintenance Records
+    match /maintenance_records/{recordId} {
+      allow get, list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        incoming().keys().hasAll(['userId', 'userName', 'flatNumber', 'monthYear', 'amount', 'utrNumber', 'status', 'createdAt']) &&
+        isValidMaintenanceRecord(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidMaintenanceRecord(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().utrNumber == existing().utrNumber &&
+        isAdmin();
+
+      allow delete: if isAdmin();
+    }
+
+    // 4. Society Expenses
+    match /society_expenses/{expenseId} {
+      allow get, list: if isSignedIn();
+
+      allow create, update: if isSignedIn() && isAdmin() &&
+        isValidExpense(incoming());
+
+      allow delete: if isSignedIn() && isAdmin();
+    }
+
+    // 5. Complaints
+    match /complaints/{complaintId} {
+      allow get, list: if isSignedIn();
+
+      allow create: if isSignedIn() &&
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'open' &&
+        incoming().keys().hasAll(['userId', 'userName', 'flatNumber', 'title', 'description', 'status', 'createdAt']) &&
+        isValidComplaint(incoming());
+
+      allow update: if isSignedIn() &&
+        isValidComplaint(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt && (
+          (existing().userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'messages', 'updatedAt'])) ||
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'adminResponse', 'messages', 'updatedAt']))
+        );
+
+      allow delete: if isAdmin() || (isSignedIn() && existing().userId == request.auth.uid);
+    }
+
+    // 6. Notices
+    match /notices/{noticeId} {
+      allow get, list: if isSignedIn();
+
+      allow create, update: if isSignedIn() && isAdmin() &&
+        isValidNotice(incoming());
+
+      allow delete: if isSignedIn() && isAdmin();
+    }
+
+    // 7. Notifications
+    match /notifications/{notificationId} {
+      allow get, list: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() && isValidNotification(incoming());
+
+      allow update: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin()) &&
+        isValidNotification(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['isRead']);
+
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+  }
+}
